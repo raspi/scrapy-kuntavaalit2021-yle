@@ -40,7 +40,7 @@ class KuntavaalitPipeline:
         # Save to temporary file
         tmpf = NamedTemporaryFile("w", prefix="yle-kv-", suffix=".json", encoding="utf8", delete=False)
         with tmpf as f:
-            json.dump(asdict(item), f)
+            json.dump(asdict(item)['data'], f)
             f.flush()
             spider.logger.info(f"saved as {f.name}")
 
