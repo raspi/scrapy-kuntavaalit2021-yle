@@ -1,0 +1,4 @@
+venv/
+items/
+.scrapy/
+__pycache__
