@@ -1,4 +1,4 @@
-# scrapy-yle-kuntavaalit2021
+# scrapy-kuntavaalit2021-yle
 
 Fetch all from [YLE Kuntavaalit 2021](https://vaalikone.yle.fi/kuntavaalit2021/) site
 

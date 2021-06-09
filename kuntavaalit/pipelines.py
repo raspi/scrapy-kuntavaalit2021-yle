@@ -15,17 +15,20 @@ class KuntavaalitPipeline:
         if not isinstance(item, Item):
             return
 
-        basepath = os.path.abspath(os.path.join("..", "items"))
+        basepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "items"))
         fullpath = None
 
         if isinstance(item, Item):
-            srcurl: SplitResult = urlsplit(item.url)
+            if isinstance(item, ItemWithMunicipality):
+                basepath = os.path.abspath(os.path.join(basepath, str(item.municipality)))
 
-            upath = srcurl.path.strip('/').split('/')[4:]
-            municipality = upath[0]
-            fname = '_'.join(upath[1:]) + ".json"
+            fname = type(item).__name__.lower()
 
-            basepath = os.path.abspath(os.path.join(basepath, municipality))
+            if isinstance(item, Answer):
+                fname += '_' + str(item.candidateid)
+
+            fname += ".json"
+
             fullpath = os.path.abspath(os.path.join(basepath, fname))
 
         if fullpath is None:

@@ -1,9 +1,15 @@
+from urllib.parse import urlsplit, SplitResult
+
 import scrapy
 
 from kuntavaalit.items import *
 
 
 class SiteSpider(scrapy.Spider):
+    """
+    Base spider (not called directly)
+    """
+
     allowed_domains = [
         'vaalikone.yle.fi',
     ]
@@ -15,30 +21,52 @@ class SiteSpider(scrapy.Spider):
         raise NotImplemented
 
     def load_questions(self, response: scrapy.http.TextResponse):
-        yield Item(
+        url: SplitResult = urlsplit(response.url)
+        p = url.path.strip('/').split('/')
+        municipality = int(p[4])
+
+        yield Question(
             url=response.url,
             data=response.json(),
+            municipality=municipality,
         )
 
     def load_candidates(self, response: scrapy.http.TextResponse):
+        url: SplitResult = urlsplit(response.url)
+        p = url.path.strip('/').split('/')
+        municipality = p[4]
+
         for i in response.json():
             yield scrapy.Request(
                 response.urljoin(
-                    f"/kuntavaalit2021/api/public/constituencies/{response.meta['_id']}/candidates/{i['id']}"
+                    f"/kuntavaalit2021/api/public/constituencies/{municipality}/candidates/{i['id']}"
                 ),
                 callback=self.load_candidate_answers,
             )
 
     def load_parties(self, response: scrapy.http.TextResponse):
-        yield Item(
+        url: SplitResult = urlsplit(response.url)
+        p = url.path.strip('/').split('/')
+        municipality = int(p[4])
+
+        yield Party(
             url=response.url,
             data=response.json(),
+            municipality=municipality,
         )
 
     def load_candidate_answers(self, response: scrapy.http.TextResponse):
-        yield Item(
+        data = response.json()
+
+        url: SplitResult = urlsplit(response.url)
+        p = url.path.strip('/').split('/')
+        municipality = int(p[4])
+
+        yield Answer(
             url=response.url,
-            data=response.json(),
+            data=data,
+            municipality=municipality,
+            candidateid=data['election_number'],
         )
 
 
@@ -69,6 +97,11 @@ class KuntaSpider(SiteSpider):
         if not found:
             raise ValueError(f"id {self.id} not found")
 
+        yield Municipality(
+            url=response.url,
+            data=response.json(),
+        )
+
         yield scrapy.Request(
             response.urljoin(f"/kuntavaalit2021/api/public/constituencies/{self.id}/parties"),
             callback=self.load_parties,
@@ -96,7 +129,14 @@ class KVSpider(SiteSpider):
     name = 'kaikki'
 
     def parse(self, response: scrapy.http.TextResponse):
-        for i in response.json():
+        data = response.json()
+
+        yield Municipality(
+            url=response.url,
+            data=data,
+        )
+
+        for i in data:
             yield scrapy.Request(
                 response.urljoin(f"/kuntavaalit2021/api/public/constituencies/{i['id']}/questions"),
                 callback=self.load_questions,
@@ -105,9 +145,6 @@ class KVSpider(SiteSpider):
             yield scrapy.Request(
                 response.urljoin(f"/kuntavaalit2021/api/public/constituencies/{i['id']}/candidates"),
                 callback=self.load_candidates,
-                meta={
-                    '_id': i['id'],
-                },
             )
 
             yield scrapy.Request(
